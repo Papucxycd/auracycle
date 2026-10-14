@@ -29,80 +29,196 @@ export function calculateCycleDay(dateStr, startStr = CURRENT_CYCLE_START) {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-export function getPhaseInfo(cycleDay) {
+// Clasificación detallada para cada día del ciclo
+export function getDayClassification(cycleDay) {
   if (cycleDay < 1) {
+    return { type: "pre", label: "Registro Previo", color: "slate" };
+  }
+  // Periodo menstrual
+  if (cycleDay >= 1 && cycleDay <= 6) {
     return {
-      phase: "Pre-ciclo",
+      type: "period",
+      label: "Menstruación",
+      badge: "🩸 Periodo",
       risk: "safe",
-      cardClass: "bg-gradient-to-br from-slate-600 to-slate-800",
-      title: "Registro Previo",
-      desc: "Fecha anterior al ciclo actual.",
-      verdict: "Sin datos",
-      icon: "ShieldCheck"
+      isPeriod: true
     };
   }
-  if (cycleDay >= 1 && cycleDay <= 7) {
+  // Fase folicular temprana/segura
+  if (cycleDay >= 7 && cycleDay <= 15) {
     return {
-      phase: "Menstruación / Folicular Temprana",
+      type: "safe",
+      label: "Folicular Segura",
+      badge: "🌿 Seguro (~0%)",
       risk: "safe",
-      cardClass: "bg-gradient-to-br from-emerald-600 to-teal-700",
-      title: "Fase Muy Segura",
-      desc: "La ovulación está a semanas de distancia. Riesgo de embarazo virtualmente 0%.",
-      verdict: "🟢 Riesgo Prácticamente Nulo (~0%)",
-      icon: "ShieldCheck"
+      isSafe: true
     };
   }
-  if (cycleDay >= 8 && cycleDay <= 15) {
-    return {
-      phase: "Folicular Media",
-      risk: "safe",
-      cardClass: "bg-gradient-to-br from-emerald-600 to-teal-800",
-      title: "Fase Folicular Segura",
-      desc: "Aún lejos de la ovulación en ciclos largos oscilantes.",
-      verdict: "🟢 Muy Bajo Riesgo",
-      icon: "ShieldCheck"
-    };
-  }
+  // Transición / Precaución temprana
   if (cycleDay >= 16 && cycleDay <= 23) {
     return {
-      phase: "Zona de Transición / Precaución",
+      type: "caution",
+      label: "Precaución",
+      badge: "🟡 Precaución",
       risk: "caution",
-      cardClass: "bg-gradient-to-br from-amber-600 to-orange-700",
-      title: "Precaución Moderada",
-      desc: "Si el ciclo decidiera acortarse inesperadamente, el riesgo comienza a subir.",
-      verdict: "🟡 Precaución - Usar Protección",
-      icon: "AlertTriangle"
+      isCaution: true
     };
   }
-  if (cycleDay >= 24 && cycleDay <= 44) {
+  // Ventana fértil inicial
+  if (cycleDay >= 24 && cycleDay <= 37) {
     return {
-      phase: "Ventana Fértil Crítica (Ciclos 42-57d)",
+      type: "fertile",
+      label: "Ventana Fértil",
+      badge: "🌱 Ventana Fértil",
       risk: "fertile",
-      cardClass: "bg-gradient-to-br from-rose-600 to-pink-800",
-      title: "Ventana Fértil / Alto Riesgo",
-      desc: "En este rango puede ocurrir la ovulación si el ciclo dura entre 42 y 57 días. Los espermatozoides sobreviven 3-5 días.",
-      verdict: "🔴 Riesgo Elevado - Evitar Sin Protección",
+      isFertile: true
+    };
+  }
+  // DÍAS PICO DE OVULACIÓN (27 Oct a 1 Nov para ciclos 52-57 días)
+  if (cycleDay >= 38 && cycleDay <= 43) {
+    return {
+      type: "ovulation",
+      label: "Días de Ovulación Pico",
+      badge: "✨ Ovulación Máxima",
+      risk: "ovulation",
+      isOvulation: true,
+      isPeak: (cycleDay === 40 || cycleDay === 41)
+    };
+  }
+  // Cierre de ventana fértil
+  if (cycleDay === 44) {
+    return {
+      type: "fertile-end",
+      label: "Cierre Fértil",
+      badge: "⚠️ Cierre Fértil",
+      risk: "caution",
+      isFertile: true
+    };
+  }
+  // Fase lútea post-ovulación
+  if (cycleDay >= 45 && cycleDay <= 51) {
+    return {
+      type: "luteal",
+      label: "Fase Lútea",
+      badge: "🌙 Post-Ovulación",
+      risk: "safe",
+      isLuteal: true
+    };
+  }
+  // Periodo inminente
+  return {
+    type: "expected-period",
+    label: "Periodo Esperado",
+    badge: "⏳ Periodo Esperado",
+    risk: "period-expected",
+    isPeriodExpected: true
+  };
+}
+
+export function getPhaseInfo(cycleDay) {
+  const dayClass = getDayClassification(cycleDay);
+
+  if (dayClass.type === "ovulation") {
+    return {
+      phase: "Días de Ovulación Pico",
+      tag: "OVULACIÓN MÁXIMA",
+      risk: "ovulation",
+      cardBg: "bg-gradient-to-br from-violet-600 via-rose-600 to-pink-500",
+      accentColor: "#E11D48",
+      title: "Día Clave de Ovulación",
+      desc: "El óvulo se libera en este rango (~27 Oct - 1 Nov). Máxima fertilidad del ciclo.",
+      verdict: "🚫 ALTA FERTILIDAD - EVITAR COITO INTERRUMPIDO",
+      ovulationCountdown: "Estás en los días pico de ovulación",
+      icon: "Sparkles"
+    };
+  }
+
+  if (dayClass.type === "fertile") {
+    const daysUntilOvulation = 38 - cycleDay;
+    return {
+      phase: "Ventana Fértil Activa",
+      tag: "VENTANA FÉRTIL",
+      risk: "fertile",
+      cardBg: "bg-gradient-to-br from-rose-500 via-pink-600 to-rose-700",
+      accentColor: "#F43F5E",
+      title: "Ventana Fértil Abierta",
+      desc: "Los espermatozoides sobreviven 3-5 días y la ovulación pico se aproxima.",
+      verdict: "🔴 Riesgo Alto - Usar Protección Obligatoria",
+      ovulationCountdown: `Ovulación pico estimada en ~${daysUntilOvulation} días (27 Oct)`,
       icon: "Flame"
     };
   }
-  if (cycleDay >= 45 && cycleDay <= 51) {
+
+  if (dayClass.type === "safe") {
     return {
-      phase: "Fase Lútea Probable",
+      phase: "Fase Folicular Segura",
+      tag: "FASE SEGURA",
+      risk: "safe",
+      cardBg: "bg-gradient-to-br from-teal-500 via-emerald-600 to-teal-700",
+      accentColor: "#10B981",
+      title: "Fase Muy Segura",
+      desc: "Ovulación lejana. Riesgo de embarazo virtualmente 0%.",
+      verdict: "🟢 Riesgo Prácticamente Nulo (~0%)",
+      ovulationCountdown: "Ovulación lejana (~3 semanas)",
+      icon: "ShieldCheck"
+    };
+  }
+
+  if (dayClass.type === "caution") {
+    return {
+      phase: "Fase de Precaución",
+      tag: "PRECAUCIÓN",
       risk: "caution",
-      cardClass: "bg-gradient-to-br from-amber-600 to-yellow-700",
-      title: "Fase Lútea Avanzada",
-      desc: "La ovulación probablemente ya ocurrió. Esperando llegada de menstruación.",
-      verdict: "🟡 Riesgo Bajo-Moderado (Post-ovulación)",
+      cardBg: "bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600",
+      accentColor: "#F59E0B",
+      title: "Zona de Precaución",
+      desc: "Si el ciclo decide adelantarse, la fertilidad puede activarse.",
+      verdict: "🟡 Precaución Moderada",
+      ovulationCountdown: "Ovulación estimada en ~15 días",
+      icon: "AlertTriangle"
+    };
+  }
+
+  if (dayClass.type === "luteal") {
+    return {
+      phase: "Fase Lútea (Post-Ovulación)",
+      tag: "POST-OVULACIÓN",
+      risk: "safe",
+      cardBg: "bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600",
+      accentColor: "#8B5CF6",
+      title: "Fase Lútea Estable",
+      desc: "La ovulación ya culminó. El cuerpo se prepara para el siguiente ciclo.",
+      verdict: "🟢 Riesgo Muy Bajo (Óvulo ya no viable)",
+      ovulationCountdown: "Ovulación finalizada",
       icon: "Clock"
     };
   }
+
+  if (dayClass.type === "expected-period") {
+    return {
+      phase: "Periodo Esperado (Día 52-57)",
+      tag: "PERIODO ESPERADO",
+      risk: "period",
+      cardBg: "bg-gradient-to-br from-rose-700 via-red-800 to-rose-950",
+      accentColor: "#BE123C",
+      title: "Llegada del Periodo",
+      desc: "Esperando menstruación según tu patrón de 52-57 días (~10-15 Nov).",
+      verdict: "🟣 Si supera el día 57 realizar test",
+      ovulationCountdown: "Ciclo en etapa final",
+      icon: "CalendarCheck"
+    };
+  }
+
   return {
-    phase: "Zona Esperada de Periodo (Día 52-57)",
-    risk: "period-expected",
-    cardClass: "bg-gradient-to-br from-purple-700 to-indigo-800",
-    title: "Periodo Inminente",
-    desc: "Tu patrón oscilante de 52-57 días culmina en estos días. Si supera el día 57, realizar prueba de embarazo.",
-    verdict: "🟣 Realizar Test si hay retraso > 57d",
-    icon: "CalendarCheck"
+    phase: "Menstruación",
+    tag: "MENSTRUACIÓN",
+    risk: "period",
+    cardBg: "bg-gradient-to-br from-rose-500 to-pink-600",
+    accentColor: "#F43F5E",
+    title: "Menstruación Activa",
+    desc: "Primeros días del ciclo.",
+    verdict: "🟢 Riesgo Nulo",
+    ovulationCountdown: "Ovulación lejana",
+    icon: "ShieldCheck"
   };
 }

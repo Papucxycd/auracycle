@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Flower2, BarChart3, Download, PlusCircle } from 'lucide-react';
-import { INITIAL_LOGS } from './data/cycles';
+import { Flower2, Calendar as CalendarIcon, Activity, History, Download, Plus, Sparkles } from 'lucide-react';
+import { INITIAL_LOGS, calculateCycleDay } from './data/cycles';
 import CycleCard from './components/CycleCard';
 import Calendar from './components/Calendar';
 import WaveChart from './components/WaveChart';
@@ -8,7 +8,8 @@ import DayModal from './components/DayModal';
 import StatsModal from './components/StatsModal';
 
 export default function App() {
-  const todayStr = "2026-10-13"; // Fecha de contexto / hoy
+  const todayStr = "2026-10-14";
+  const [activeTab, setActiveTab] = useState('today'); // 'today', 'calendar', 'wave'
 
   const [logs, setLogs] = useState(() => {
     const saved = localStorage.getItem('auracycle_pwa_logs');
@@ -53,81 +54,150 @@ export default function App() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `auracycle_pwa_backup_${todayStr}.json`);
+    downloadAnchor.setAttribute("download", `auracycle_backup_${todayStr}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
   };
 
+  const cycleDay = calculateCycleDay(todayStr);
+
   return (
-    <div className="min-h-screen pb-24 md:pb-12 bg-slate-50 text-slate-800">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-30 shadow-sm/50">
-        <div className="max-w-xl mx-auto px-4 py-3.5 flex items-center justify-between">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 pb-28">
+      {/* iOS Top Bar con Glassmorphism */}
+      <header className="bg-white/85 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-30 shadow-[0_1px_12px_rgba(0,0,0,0.02)]">
+        <div className="max-w-md mx-auto px-5 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-400 flex items-center justify-center text-white shadow-md shadow-rose-200">
-              <Flower2 className="w-5 h-5" />
+            <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-rose-200">
+              <Flower2 className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-slate-900 leading-none">AuraCycle PWA</h1>
-              <span className="text-[11px] font-semibold text-rose-500 uppercase tracking-wider">Patrón Oscilante (32-57d)</span>
+              <h1 className="text-base font-black tracking-tight text-slate-900 leading-none">AuraCycle</h1>
+              <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Patrón 32-57 días</span>
             </div>
           </div>
+          
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsStatsModalOpen(true)}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
-              title="Estadísticas"
+              className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition active:scale-95"
+              title="Historial de Ciclos"
             >
-              <BarChart3 className="w-5 h-5" />
+              <History className="w-4 h-4" />
             </button>
             <button
               onClick={handleExportBackup}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition"
-              title="Exportar Copia de Seguridad"
+              className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition active:scale-95"
+              title="Descargar Respaldo"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-xl mx-auto px-4 pt-4 space-y-4">
-        {/* Cycle Card / Traffic Light */}
-        <CycleCard todayStr={todayStr} />
+      {/* Contenido Principal */}
+      <main className="max-w-md mx-auto px-4.5 pt-4 space-y-4">
+        
+        {/* Vista: Hoy */}
+        {activeTab === 'today' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <CycleCard todayStr={todayStr} />
 
-        {/* Quick Log Action */}
-        <div className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-sm flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
-              <PlusCircle className="w-5 h-5" />
+            {/* Botón flotante estilo iOS para registro rápido */}
+            <div
+              onClick={() => handleSelectDay(todayStr)}
+              className="bg-white rounded-[24px] p-4 border border-slate-100/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex items-center justify-between cursor-pointer active:scale-[0.98] transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900">Registrar Día de Hoy</h3>
+                  <p className="text-[11px] text-slate-400">Día {cycleDay} • Síntomas, flujo o relaciones</p>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">
+                Añadir +
+              </span>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">¿Registrar algo hoy?</h3>
-              <p className="text-xs text-slate-500">Día 24 del ciclo (13 de Octubre)</p>
+
+            {/* Vista previa del Calendario */}
+            <Calendar
+              logs={logs}
+              onSelectDay={handleSelectDay}
+              todayStr={todayStr}
+            />
+          </div>
+        )}
+
+        {/* Vista: Calendario Completo */}
+        {activeTab === 'calendar' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <Calendar
+              logs={logs}
+              onSelectDay={handleSelectDay}
+              todayStr={todayStr}
+            />
+
+            {/* Tarjeta explicativa de ovulación */}
+            <div className="bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-[28px] p-5 text-white shadow-lg shadow-violet-200">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Sparkles className="w-5 h-5 text-white" />
+                <h4 className="text-sm font-extrabold">Ventana de Ovulación Pico</h4>
+              </div>
+              <p className="text-xs text-white/90 leading-relaxed font-normal">
+                En tu calendario están marcados con bordes punteados los días del <strong className="font-black text-white">27 de Octubre al 1 de Noviembre</strong>. Este es el periodo donde ocurre la liberación del óvulo para ciclos largos de 52-57 días.
+              </p>
             </div>
           </div>
-          <button
-            onClick={() => handleSelectDay(todayStr)}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-sm transition active:scale-95"
-          >
-            Añadir Registro
-          </button>
-        </div>
+        )}
 
-        {/* Calendar */}
-        <Calendar
-          logs={logs}
-          onSelectDay={handleSelectDay}
-          todayStr={todayStr}
-        />
-
-        {/* Wave Pattern Chart */}
-        <WaveChart todayStr={todayStr} />
+        {/* Vista: Patrón y Gráficas */}
+        {activeTab === 'wave' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <WaveChart todayStr={todayStr} />
+          </div>
+        )}
       </main>
 
-      {/* Modals */}
+      {/* iOS Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-xl border-t border-slate-100/80 z-40 pb-[env(safe-area-inset-bottom,8px)] shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+        <div className="max-w-md mx-auto px-6 py-2 flex items-center justify-between">
+          <button
+            onClick={() => setActiveTab('today')}
+            className={`flex flex-col items-center gap-1 py-1 transition-all active:scale-90 ${
+              activeTab === 'today' ? 'text-rose-600 font-extrabold' : 'text-slate-400 font-medium'
+            }`}
+          >
+            <Flower2 className={`w-5 h-5 ${activeTab === 'today' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <span className="text-[10px]">Hoy</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`flex flex-col items-center gap-1 py-1 transition-all active:scale-90 ${
+              activeTab === 'calendar' ? 'text-rose-600 font-extrabold' : 'text-slate-400 font-medium'
+            }`}
+          >
+            <CalendarIcon className={`w-5 h-5 ${activeTab === 'calendar' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <span className="text-[10px]">Calendario</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('wave')}
+            className={`flex flex-col items-center gap-1 py-1 transition-all active:scale-90 ${
+              activeTab === 'wave' ? 'text-rose-600 font-extrabold' : 'text-slate-400 font-medium'
+            }`}
+          >
+            <Activity className={`w-5 h-5 ${activeTab === 'wave' ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
+            <span className="text-[10px]">Patrón Ondas</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Modales */}
       <DayModal
         dateStr={selectedDay}
         log={selectedDay ? logs[selectedDay] : null}
